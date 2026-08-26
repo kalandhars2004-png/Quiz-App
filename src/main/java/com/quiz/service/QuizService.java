@@ -95,11 +95,21 @@ public class QuizService {
 
         try {
             String answersJson = objectMapper.writeValueAsString(request.getAnswers());
-            QuizResponse response = QuizResponse.builder()
-                    .quiz(quiz)
-                    .userId(request.getUserId())
-                    .answers(answersJson)
-                    .build();
+
+            List<QuizResponse> existing = quizResponseRepository
+                    .findByQuizIdAndUserIdOrderByIdDesc(request.getQuizId(), request.getUserId());
+
+            QuizResponse response;
+            if (!existing.isEmpty()) {
+                response = existing.get(0);
+                response.setAnswers(answersJson);
+            } else {
+                response = QuizResponse.builder()
+                        .quiz(quiz)
+                        .userId(request.getUserId())
+                        .answers(answersJson)
+                        .build();
+            }
             quizResponseRepository.save(response);
         } catch (Exception e) {
             throw new RuntimeException("Error saving answers: " + e.getMessage());
@@ -109,10 +119,14 @@ public class QuizService {
     }
 
     public ResultDTO getQuizResult(GetQuizResultRequest request) {
-        QuizResponse response = quizResponseRepository
-                .findByQuizIdAndUserId(request.getQuizId(), request.getUserId())
-                .orElseThrow(() -> new RuntimeException("No response found for quizId: " + request.getQuizId() + " and userId: " + request.getUserId()));
+        List<QuizResponse> responses = quizResponseRepository
+                .findByQuizIdAndUserIdOrderByIdDesc(request.getQuizId(), request.getUserId());
 
+        if (responses.isEmpty()) {
+            throw new RuntimeException("No response found for quizId: " + request.getQuizId() + " and userId: " + request.getUserId());
+        }
+
+        QuizResponse response = responses.get(0);
         try {
             Map<Long, Integer> answers = objectMapper.readValue(
                     response.getAnswers(),
