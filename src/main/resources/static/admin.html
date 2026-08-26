@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .navbar {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .navbar h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .navbar .badge {
+            background: rgba(0,210,255,0.15);
+            border: 1px solid rgba(0,210,255,0.3);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #00d2ff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            padding: 12px 28px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: #aaa;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 20px rgba(58,123,213,0.4);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 .icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color: #3a7bd5;
+            box-shadow: 0 0 0 3px rgba(58,123,213,0.2);
+        }
+
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(58,123,213,0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(58,123,213,0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(56,239,125,0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(56,239,125,0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e44d26, #f16529);
+            color: #fff;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        .btn-outline:hover { background: rgba(255,255,255,0.1); }
+
+        .btn-sm { padding: 8px 18px; font-size: 13px; }
+
+        .question-block {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .question-block .q-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .question-block .q-number {
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            padding: 4px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .option-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 50px;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .option-row input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            text-align: center;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .option-row input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .option-row input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #38ef7d;
+        }
+
+        .options-container { margin: 10px 0; }
+
+        .add-option-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px dashed rgba(255,255,255,0.2);
+            color: #aaa;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .add-option-btn:hover { border-color: #3a7bd5; color: #3a7bd5; }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 14px;
+        }
+
+        th {
+            color: #aaa;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        tr:hover { background: rgba(255,255,255,0.04); }
+
+        .quiz-id-badge {
+            background: rgba(0,210,255,0.15);
+            color: #00d2ff;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .topic-badge {
+            background: rgba(56,239,125,0.12);
+            color: #38ef7d;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .count-badge {
+            background: rgba(255,107,107,0.12);
+            color: #ff6b6b;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.4s ease;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: linear-gradient(135deg, #11998e, #38ef7d); }
+        .toast.error { background: linear-gradient(135deg, #e44d26, #f16529); }
+        .toast.info { background: linear-gradient(135deg, #3a7bd5, #00d2ff); }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #666;
+        }
+
+        .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+        .empty-state p { font-size: 15px; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .view-questions-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 500;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .view-questions-overlay.active { display: flex; }
+
+        .modal {
+            background: #1a1a2e;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 { font-size: 18px; }
+
+        .close-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .question-view-item {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .question-view-item .q-text {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .option-view {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .option-view.correct {
+            background: rgba(56,239,125,0.1);
+            border: 1px solid rgba(56,239,125,0.3);
+            color: #38ef7d;
+        }
+
+        .option-view .opt-num {
+            font-weight: 700;
+            min-width: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="toast" id="toast"></div>
+
+    <nav class="navbar">
+        <h1>Quiz Admin Panel</h1>
+        <span class="badge">Admin Dashboard</span>
+    </nav>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('createQuiz')">Create Quiz</button>
+            <button class="tab-btn" onclick="switchTab('addQuestions')">Add Questions</button>
+            <button class="tab-btn" onclick="switchTab('viewQuizzes')">All Quizzes</button>
+        </div>
+
+        <!-- CREATE QUIZ TAB -->
+        <div class="tab-content active" id="tab-createQuiz">
+            <div class="card">
+                <h2><span class="icon">+</span> Create New Quiz</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quiz Title</label>
+                        <input type="text" id="quizTitle" placeholder="e.g. Java Fundamentals Quiz">
+                    </div>
+                    <div class="form-group">
+                        <label>Topic</label>
+                        <input type="text" id="quizTopic" placeholder="e.g. Java, Spring Boot, Hibernate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="quizDesc" placeholder="Short description about this quiz..."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="createQuiz()">Create Quiz</button>
+            </div>
+        </div>
+
+        <!-- ADD QUESTIONS TAB -->
+        <div class="tab-content" id="tab-addQuestions">
+            <div class="card">
+                <h2><span class="icon">?</span> Add Questions to Quiz</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Select Quiz ID</label>
+                        <input type="number" id="addQQuizId" placeholder="Enter Quiz ID">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <button class="btn btn-outline btn-sm" onclick="loadQuizzesForSelect()" style="margin-bottom:18px;">Load Quizzes</button>
+                    </div>
+                </div>
+                <div id="quizSelectInfo" style="margin-bottom:16px;font-size:13px;color:#aaa;"></div>
+
+                <div id="questionsContainer"></div>
+
+                <div class="btn-group">
+                    <button class="btn btn-outline" onclick="addQuestionBlock()">+ Add Another Question</button>
+                    <button class="btn btn-success" onclick="submitAllQuestions()">Submit All Questions</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW QUIZZES TAB -->
+        <div class="tab-content" id="tab-viewQuizzes">
+            <div class="stats-grid" id="statsGrid" style="display:none;">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQuizzes">0</div>
+                    <div class="stat-label">Total Quizzes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQuestions">0</div>
+                    <div class="stat-label">Total Questions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTopics">0</div>
+                    <div class="stat-label">Topics Covered</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <h2><span class="icon">&#128218;</span> All Quizzes</h2>
+                    <button class="btn btn-outline btn-sm" onclick="loadAllQuizzes()">Refresh</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Quiz ID</th>
+                                <th>Title</th>
+                                <th>Topic</th>
+                                <th>Questions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quizTableBody">
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <div class="emoji">&#128269;</div>
+                                        <p>Click "Refresh" to load quizzes</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW QUESTIONS MODAL -->
+    <div class="view-questions-overlay" id="questionsOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Questions</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE = 'http://localhost:8080/api';
+        let questionCount = 0;
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type + ' show';
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+
+            if (name === 'viewQuizzes') loadAllQuizzes();
+        }
+
+        async function createQuiz() {
+            const title = document.getElementById('quizTitle').value.trim();
+            const topic = document.getElementById('quizTopic').value.trim();
+            const desc = document.getElementById('quizDesc').value.trim();
+
+            if (!title) { showToast('Please enter quiz title', 'error'); return; }
+
+            try {
+                const res = await fetch(BASE + '/admin/createQuiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, topic, description: desc })
+                });
+                const data = await res.json();
+                showToast('Quiz Created! ID: ' + data.quizId, 'success');
+                document.getElementById('quizTitle').value = '';
+                document.getElementById('quizTopic').value = '';
+                document.getElementById('quizDesc').value = '';
+            } catch (e) {
+                showToast('Error creating quiz', 'error');
+            }
+        }
+
+        function addQuestionBlock() {
+            questionCount++;
+            const id = questionCount;
+            const container = document.getElementById('questionsContainer');
+            const block = document.createElement('div');
+            block.className = 'question-block';
+            block.id = 'qblock-' + id;
+            block.innerHTML = `
+                <div class="q-header">
+                    <span class="q-number">Question ${id}</span>
+                    <button class="btn btn-danger btn-sm" onclick="removeQuestionBlock(${id})">Remove</button>
+                </div>
+                <div class="form-group">
+                    <label>Question Text</label>
+                    <input type="text" id="qtext-${id}" placeholder="Enter your question here...">
+                </div>
+                <label style="font-size:13px;color:#aaa;margin-bottom:8px;display:block;">Options (select correct answer)</label>
+                <div class="options-container" id="opts-${id}">
+                    <div class="option-row">
+                        <input type="number" value="1" readonly style="opacity:0.6;">
+                        <input type="text" placeholder="Option 1 text" class="opt-text">
+                        <input type="radio" name="correct-${id}" value="1" checked>
+                    </div>
+                    <div class="option-row">
+                        <input type="number" value="2" readonly style="opacity:0.6;">
+                        <input type="text" placeholder="Option 2 text" class="opt-text">
+                        <input type="radio" name="correct-${id}" value="2">
+                    </div>
+                </div>
+                <button class="add-option-btn" onclick="addOption(${id})">+ Add Option</button>
+            `;
+            container.appendChild(block);
+        }
+
+        function addOption(qId) {
+            const container = document.getElementById('opts-' + qId);
+            const count = container.querySelectorAll('.option-row').length + 1;
+            if (count > 10) { showToast('Max 10 options allowed', 'error'); return; }
+
+            const row = document.createElement('div');
+            row.className = 'option-row';
+            row.innerHTML = `
+                <input type="number" value="${count}" readonly style="opacity:0.6;">
+                <input type="text" placeholder="Option ${count} text" class="opt-text">
+                <input type="radio" name="correct-${qId}" value="${count}">
+            `;
+            container.appendChild(row);
+        }
+
+        function removeQuestionBlock(id) {
+            document.getElementById('qblock-' + id).remove();
+        }
+
+        async function submitAllQuestions() {
+            const quizId = document.getElementById('addQQuizId').value;
+            if (!quizId) { showToast('Please enter Quiz ID', 'error'); return; }
+
+            const blocks = document.querySelectorAll('.question-block');
+            if (blocks.length === 0) { showToast('Add at least one question', 'error'); return; }
+
+            const questions = [];
+            blocks.forEach((block) => {
+                const qId = block.id.split('-')[1];
+                const qText = document.getElementById('qtext-' + qId).value.trim();
+                const optTexts = block.querySelectorAll('.opt-text');
+                const correctRadio = block.querySelector('input[name="correct-' + qId + '"]:checked');
+
+                if (!qText) return;
+
+                const options = [];
+                optTexts.forEach((opt, idx) => {
+                    options.push({ optionNumber: idx + 1, text: opt.value.trim() });
+                });
+
+                questions.push({
+                    questionText: qText,
+                    options: options,
+                    correctOptionNumber: parseInt(correctRadio.value)
+                });
+            });
+
+            if (questions.length === 0) { showToast('Please fill in the questions', 'error'); return; }
+
+            try {
+                const res = await fetch(BASE + '/admin/addQuestions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quizId: parseInt(quizId), questions })
+                });
+                const data = await res.json();
+                showToast(data.message, 'success');
+                document.getElementById('questionsContainer').innerHTML = '';
+                questionCount = 0;
+            } catch (e) {
+                showToast('Error adding questions', 'error');
+            }
+        }
+
+        async function loadAllQuizzes() {
+            try {
+                const res = await fetch(BASE + '/admin/getAllQuizzes', { method: 'GET' });
+                const data = await res.json();
+
+                const tbody = document.getElementById('quizTableBody');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="emoji">&#128218;</div><p>No quizzes found. Create one first!</p></div></td></tr>';
+                    document.getElementById('statsGrid').style.display = 'none';
+                    return;
+                }
+
+                let totalQ = 0;
+                const topics = new Set();
+                tbody.innerHTML = '';
+                data.forEach(q => {
+                    totalQ += q.questionCount;
+                    if (q.topic) topics.add(q.topic);
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><span class="quiz-id-badge">#${q.quizId}</span></td>
+                            <td><strong>${q.title}</strong></td>
+                            <td><span class="topic-badge">${q.topic || 'N/A'}</span></td>
+                            <td><span class="count-badge">${q.questionCount}</span></td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" onclick="viewQuestions(${q.quizId}, '${q.title.replace(/'/g, "\\'")}')">View Questions</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('totalQuizzes').textContent = data.length;
+                document.getElementById('totalQuestions').textContent = totalQ;
+                document.getElementById('totalTopics').textContent = topics.size;
+                document.getElementById('statsGrid').style.display = 'grid';
+            } catch (e) {
+                showToast('Error loading quizzes', 'error');
+            }
+        }
+
+        async function viewQuestions(quizId, title) {
+            try {
+                const res = await fetch(BASE + '/user/getQuiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quizId })
+                });
+                const data = await res.json();
+
+                document.getElementById('modalTitle').textContent = title + ' (Quiz #' + quizId + ')';
+                const body = document.getElementById('modalBody');
+
+                if (!data.questions || data.questions.length === 0) {
+                    body.innerHTML = '<div class="empty-state"><div class="emoji">&#128533;</div><p>No questions yet</p></div>';
+                } else {
+                    body.innerHTML = data.questions.map((q, i) => `
+                        <div class="question-view-item">
+                            <div class="q-text">Q${i + 1}. ${q.questionText}</div>
+                            ${q.options.map(o => `
+                                <div class="option-view">
+                                    <span class="opt-num">${o.optionNumber}.</span> ${o.text}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `).join('');
+                }
+
+                document.getElementById('questionsOverlay').classList.add('active');
+            } catch (e) {
+                showToast('Error loading questions', 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('questionsOverlay').classList.remove('active');
+        }
+
+        async function loadQuizzesForSelect() {
+            try {
+                const res = await fetch(BASE + '/admin/getAllQuizzes', { method: 'GET' });
+                const data = await res.json();
+                if (data.length > 0) {
+                    const info = data.map(q => '#' + q.quizId + ' ' + q.title).join(' | ');
+                    document.getElementById('quizSelectInfo').innerHTML = 'Available: ' + info;
+                }
+            } catch (e) {}
+        }
+
+        addQuestionBlock();
+        addQuestionBlock();
+    </script>
+</body>
+</html>
