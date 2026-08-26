@@ -8,7 +8,7 @@ pipeline {
     environment {
         APP_JAR        = 'target/quiz-bg-1.0.0.jar'
         APPZ_HOME      = 'D:/tom/apache-tomcat-9.0.53'
-        APPZ_ARTIFACTS = 'D:/MONTH-2/Week-4/wednesday/appzillon-artifacts'
+        APPZ_ARTIFACTS = 'D:/forDeploy'
         JAVA_HOME      = 'D:/software/jdk-21.0.8'
     }
 
