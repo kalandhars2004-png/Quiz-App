@@ -9,7 +9,8 @@ pipeline {
         // JAVA
         // ============================================================
 
-        JAVA_HOME = 'D:/software/jdk-21.0.8'
+        JAVA_HOME = 'D:\\software\\jdk-21.0.8'
+        MAVEN_HOME = 'D:\\apache-maven-3.8.5'
 
         // ============================================================
         // SPRING BOOT BACKEND
@@ -23,12 +24,12 @@ pipeline {
         // TOMCAT / APPZILLON
         // ============================================================
 
-        APPZ_HOME = 'D:/tom/apache-tomcat-9.0.53'
-        APPZ_ARTIFACTS = 'D:/forDeploy'
+        APPZ_HOME = 'D:\\tom\\apache-tomcat-9.0.53'
+        APPZ_ARTIFACTS = 'D:\\forDeploy'
 
         TOMCAT_PORT = '8090'
 
-        APPZILLON_URL = 'http://localhost:88090/quizzz/'
+        APPZILLON_URL = 'http://localhost:8090/quizzz/'
     }
 
 
@@ -54,7 +55,7 @@ pipeline {
                 bat '''
                     @echo off
 
-                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
 
                     echo JAVA VERSION
@@ -128,7 +129,7 @@ pipeline {
                 bat '''
                     @echo off
 
-                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
 
                     mvn clean package -DskipTests
@@ -252,7 +253,7 @@ pipeline {
                     echo ==========================================
 
 
-                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
                     set "JENKINS_NODE_COOKIE=dontKillMe"
 
@@ -263,7 +264,7 @@ pipeline {
 
 
                     start "QuizApp-Backend" /B cmd /c ^
-                    "set JENKINS_NODE_COOKIE=dontKillMe && java -jar target\\quiz-bg-1.0.0.jar > backend.log 2>&1"
+                    "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=D:\software\jdk-21.0.8 && java -jar target\\quiz-bg-1.0.0.jar > backend.log 2>&1"
 
 
                     echo.
@@ -552,7 +553,7 @@ pipeline {
                     echo ==========================================
 
 
-                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
                     set "CATALINA_HOME=%APPZ_HOME%"
                     set "JENKINS_NODE_COOKIE=dontKillMe"
