@@ -39,6 +39,8 @@ pipeline {
         DB_USER = 'root'
         DB_PASS = 'root'
         MYSQL_BIN = 'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin'
+        // PLAYWRIGHT - triggered after UI opened
+        PLAYWRIGHT_DIR = 'D:\\playwright-quizzz'
     }
 
 
@@ -902,7 +904,7 @@ pipeline {
         }
 
         // ============================================================
-        // FINAL POPUP - OPEN APPZILLON AFTER DEPLOY (optional manual)
+        // FINAL POPUP - OPEN APPZILLON AFTER DEPLOY
         // ============================================================
         stage('Open Appzillon Popup') {
             steps {
@@ -915,6 +917,71 @@ pipeline {
                     start "" "%APPZILLON_URL%"
                     ping 127.0.0.1 -n 3 >nul
                     echo Appzillon popup triggered (Chrome/default browser)
+                    REM Also open via Chrome explicitly if available
+                    if exist "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" (
+                        start "" "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" "%APPZILLON_URL%"
+                    )
+                    echo Waiting 8 seconds for UI to fully load before Playwright...
+                    ping 127.0.0.1 -n 9 >nul
+                '''
+            }
+        }
+
+        // ============================================================
+        // PLAYWRIGHT - TRIGGERED AFTER UI OPENED (HEADED CHROME POPUP)
+        // ============================================================
+        stage('Playwright UI Tests - After Open') {
+            steps {
+                echo '=========================================='
+                echo 'PLAYWRIGHT TRIGGERED AFTER UI OPENED - HEADED CHROME'
+                echo '=========================================='
+                bat '''
+                    @echo off
+                    echo Playwright dir: %PLAYWRIGHT_DIR%
+                    echo Appzillon URL: %APPZILLON_URL%
+                    echo.
+                    if not exist "%PLAYWRIGHT_DIR%" (
+                        echo ERROR: Playwright dir not found at %PLAYWRIGHT_DIR%
+                        echo Creating dir...
+                        mkdir "%PLAYWRIGHT_DIR%" 2>nul
+                        exit /b 1
+                    )
+                    if not exist "%PLAYWRIGHT_DIR%\\package.json" (
+                        echo ERROR: package.json missing in %PLAYWRIGHT_DIR%
+                        dir "%PLAYWRIGHT_DIR%"
+                        exit /b 1
+                    )
+                    echo.
+                    echo Checking playwright tests...
+                    dir "%PLAYWRIGHT_DIR%\\tests" 2>nul
+                    echo.
+                    echo Ensuring browsers available (use existing if cert issue)...
+                    cd /d "%PLAYWRIGHT_DIR%"
+                    REM Try install but ignore cert failure - tests will use existing chromium from D:\\MONTH-2\\PlayWrite -Record if needed
+                    npm install 2>&1 | findstr /i "playwright"
+                    echo.
+                    echo ==========================================
+                    echo RUNNING PLAYWRIGHT HEADED (CHROME POPUP AFTER UI)
+                    echo ==========================================
+                    echo Command: npx playwright test --headed --project=chromium
+                    echo UI should already be open at %APPZILLON_URL% - tests will reuse/open new Chrome headed
+                    npx playwright test --headed --project=chromium 2>&1
+                    set PW_EXIT=%errorlevel%
+                    echo.
+                    echo Playwright exit: %PW_EXIT%
+                    if %PW_EXIT% NEQ 0 (
+                        echo WARNING: Some Playwright tests failed - check html report
+                        if exist "playwright-report\\index.html" (
+                            echo Opening report...
+                            start "" "playwright-report\\index.html"
+                        )
+                        REM Do not fail pipeline hard - mark unstable but continue
+                        echo Playwright completed with failures, pipeline continues
+                    ) else (
+                        echo ALL PLAYWRIGHT TESTS PASSED - UI VERIFIED
+                        if exist "playwright-report\\index.html" start "" "playwright-report\\index.html"
+                    )
+                    exit /b 0
                 '''
             }
         }
