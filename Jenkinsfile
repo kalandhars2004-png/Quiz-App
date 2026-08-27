@@ -2,6 +2,16 @@ pipeline {
 
     agent any
 
+    options {
+        // Allow retry on Jenkins restart - checkout cannot be resumed
+        retry(conditions: [nonresumable()], count: 2)
+        // Prevent resume after restart from hanging
+        durabilityHint('PERFORMANCE_OPTIMIZED')
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+
     environment {
         // ============================================================
         // JAVA
