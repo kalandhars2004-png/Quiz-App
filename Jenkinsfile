@@ -724,18 +724,18 @@ pipeline {
                         echo ERROR: Failed to copy %WEB_WAR% to webapps\\quizzz.war
                         exit /b 1
                     )
-                    echo Web WAR copied: %WEB_WAR% to %APPZ_HOME%\webapps\quizzz.war
-                    dir "%APPZ_HOME%\webapps\quizzz.war"
+                    echo Web WAR copied: %WEB_WAR% to %APPZ_HOME%\\webapps\\quizzz.war
+                    dir "%APPZ_HOME%\\webapps\\quizzz.war"
 
                     if exist "%SERVER_WAR%" (
                         echo.
                         echo Copying Server WAR...
-                        copy /Y "%SERVER_WAR%" "%APPZ_HOME%\webapps\AppzillonServer.war"
+                        copy /Y "%SERVER_WAR%" "%APPZ_HOME%\\webapps\\AppzillonServer.war"
                         if errorlevel 1 (
                             echo ERROR: Failed to copy %SERVER_WAR%
                             exit /b 1
                         )
-                        echo Server WAR copied: %SERVER_WAR% to %APPZ_HOME%\webapps\AppzillonServer.war
+                        echo Server WAR copied: %SERVER_WAR% to %APPZ_HOME%\\webapps\\AppzillonServer.war
                         dir "%APPZ_HOME%\\webapps\\AppzillonServer.war"
                     )
 
