@@ -12,35 +12,34 @@ pipeline {
 
     environment {
         // ============================================================
-        // JAVA
+        // ★ GENERIC CONFIG - CHANGE ONLY HERE, ALL STAGES USE THESE ★
         // ============================================================
+        // JAVA / MAVEN
         JAVA_HOME = 'D:\\software\\jdk-21.0.8'
         MAVEN_HOME = 'D:\\apache-maven-3.8.5'
 
-        // ============================================================
-        // SPRING BOOT BACKEND
-        // ============================================================
+        // BACKEND
         APP_JAR = 'target/quiz-bg-1.0.0.jar'
         BACKEND_PORT = '8080'
         BACKEND_URL = 'http://localhost:8080/api/user/getQuizzes'
 
-        // ============================================================
-        // TOMCAT / APPZILLON
-        // ============================================================
+        // TOMCAT / APPZILLON - APPZILLON PROJECT BIN IS THE ONLY SOURCE
         APPZ_HOME = 'D:\\tom\\apache-tomcat-9.0.53'
-        // Keep forDeploy for backward compat, but primary is QUIZZ_BIN
-        APPZ_ARTIFACTS = 'D:\\forDeploy'
-        QUIZZ_PROJECT = 'D:\\MONTH-2\\Week-4\\wednesday\\quizzz\\quizzz'
-        QUIZZ_BIN = 'D:\\MONTH-2\\Week-4\\wednesday\\quizzz\\quizzz\\bin'
+        APPZ_ARTIFACTS = 'D:\\forDeploy' // fallback if QUIZZ_BIN missing
+        QUIZZ_PROJECT = 'D:\\MONTH-2\\Week-4\\wednesday\\quizzz\\quizzz' // Appzillon project root (contains .apzprj)
+        QUIZZ_BIN = 'D:\\MONTH-2\\Week-4\\wednesday\\quizzz\\quizzz\\bin' // -> Web/*.war, Server/*.war, Properties/*, Database/MySql/*.sql
         TOMCAT_PORT = '8090'
         APPZILLON_URL = 'http://localhost:8090/quizzz/'
-        // DB
+
+        // DB - used for MySql scripts (USE <DB_NAME>; on top) + Tomcat DataSource
         DB_NAME = 'r'
         DB_USER = 'root'
         DB_PASS = 'root'
         MYSQL_BIN = 'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin'
-        // PLAYWRIGHT - triggered after UI opened
+
+        // PLAYWRIGHT - runs AFTER UI popup (UI must be on APPZILLON_URL)
         PLAYWRIGHT_DIR = 'D:\\playwright-quizzz'
+        // NOTE: All stages below read from above vars via %VAR% (bat) or $env:VAR (powershell) - no hardcoding inside stages
     }
 
 
@@ -60,7 +59,7 @@ pipeline {
 
                 bat '''
                     @echo off
-                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
+                    set "JAVA_HOME=%JAVA_HOME%"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
                     echo JAVA VERSION
                     java -version
@@ -95,8 +94,8 @@ pipeline {
 
                 bat '''
                     @echo off
-                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8080 ^| findstr LISTENING') do (
-                        echo Killing process %%a on port 8080
+                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%BACKEND_PORT% ^| findstr LISTENING') do (
+                        echo Killing process %%a on port %BACKEND_PORT%
                         taskkill /F /PID %%a >nul 2>&1
                     )
                     ping 127.0.0.1 -n 3 >nul
@@ -108,7 +107,7 @@ pipeline {
 
                 bat '''
                     @echo off
-                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
+                    set "JAVA_HOME=%JAVA_HOME%"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
                     mvn clean package -DskipTests
                     if errorlevel 1 (
@@ -177,16 +176,16 @@ pipeline {
 
                     echo.
                     echo ==========================================
-                    echo CHECKING PORT 8080
+                    echo CHECKING PORT %BACKEND_PORT%
                     echo ==========================================
 
-                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8080 ^| findstr LISTENING') do (
-                        echo Stopping process %%a on port 8080
+                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%BACKEND_PORT% ^| findstr LISTENING') do (
+                        echo Stopping process %%a on port %BACKEND_PORT%
                         taskkill /F /PID %%a >nul 2>&1
                     )
 
                     echo.
-                    echo Waiting for port 8080...
+                    echo Waiting for port %BACKEND_PORT%...
                     ping 127.0.0.1 -n 4 >nul
 
                     echo.
@@ -194,14 +193,14 @@ pipeline {
                     echo STARTING QUIZAPP BACKEND
                     echo ==========================================
 
-                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
+                    set "JAVA_HOME=%JAVA_HOME%"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
                     set "JENKINS_NODE_COOKIE=dontKillMe"
 
                     echo Starting:
-                    echo java -jar target\\quiz-bg-1.0.0.jar
+                    echo java -jar %APP_JAR%
 
-                    start "QuizApp-Backend" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=D:/software/jdk-21.0.8 && java -jar target\\quiz-bg-1.0.0.jar > backend.log 2>&1"
+                    start "QuizApp-Backend" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=%JAVA_HOME:\=/% && java -jar %APP_JAR% > backend.log 2>&1"
 
                     echo.
                     echo BACKEND START COMMAND EXECUTED
@@ -280,9 +279,9 @@ pipeline {
 
                         echo.
                         echo ==========================================
-                        echo PORT 8080 STATUS
+                        echo PORT %BACKEND_PORT% STATUS
                         echo ==========================================
-                        netstat -ano | findstr :8080
+                        netstat -ano | findstr :%BACKEND_PORT%
 
                         echo.
                         echo ==========================================
@@ -589,7 +588,7 @@ pipeline {
                     if not exist "%DB_PATH%" (
                         echo DB_PATH not found, trying alternate locations
                         if exist "%QUIZZ_PROJECT%\\bin\\Server\\Database\\MySql" set "DB_PATH=%QUIZZ_PROJECT%\\bin\\Server\\Database\\MySql"
-                        if not exist "%DB_PATH%" if exist "D:\\forDeploy\\lib\\AppzillonServer\\quizzz\\Database\\MySql" set "DB_PATH=D:\\forDeploy\\lib\\AppzillonServer\\quizzz\\Database\\MySql"
+                        if not exist "%DB_PATH%" if exist "%APPZ_ARTIFACTS%\\lib\\AppzillonServer\\quizzz\\Database\\MySql" set "DB_PATH=%APPZ_ARTIFACTS%\\lib\\AppzillonServer\\quizzz\\Database\\MySql"
                     )
 
                     echo Final DB_PATH: %DB_PATH%
@@ -743,7 +742,7 @@ pipeline {
                     echo ==========================================
                     echo STARTING TOMCAT
                     echo ==========================================
-                    set "JAVA_HOME=D:\\software\\jdk-21.0.8"
+                    set "JAVA_HOME=%JAVA_HOME%"
                     set "PATH=%JAVA_HOME%\\bin;%PATH%"
                     set "CATALINA_HOME=%APPZ_HOME%"
                     set "JENKINS_NODE_COOKIE=dontKillMe"
@@ -952,20 +951,21 @@ pipeline {
                         exit /b 1
                     )
                     echo.
-                    echo Checking playwright tests...
+                    echo Checking playwright tests (only Home-Quiz flow as requested)...
                     dir "%PLAYWRIGHT_DIR%\\tests" 2>nul
                     echo.
-                    echo Ensuring browsers available (use existing if cert issue)...
                     cd /d "%PLAYWRIGHT_DIR%"
-                    REM Try install but ignore cert failure - tests will use existing chromium from D:\\MONTH-2\\PlayWrite -Record if needed
-                    npm install 2>&1 | findstr /i "playwright"
+                    echo Using system Chrome (channel:chrome) to avoid download cert issue...
+                    echo Check playwright config uses channel:chrome
+                    type playwright.config.js | findstr channel
                     echo.
                     echo ==========================================
-                    echo RUNNING PLAYWRIGHT HEADED (CHROME POPUP AFTER UI)
+                    echo RUNNING PLAYWRIGHT HEADED - HOME-QUIZ FLOW ONLY
                     echo ==========================================
-                    echo Command: npx playwright test --headed --project=chromium
-                    echo UI should already be open at %APPZILLON_URL% - tests will reuse/open new Chrome headed
-                    npx playwright test --headed --project=chromium 2>&1
+                    echo Command: npx playwright test tests/05-home-quiz-flow.spec.js --headed --project=chromium
+                    echo Steps: Home quizzz__Home__el_inp_1=1, btn_1 submit, then Quiz 10 Qs random mark btn_2, finish btn_3
+                    echo UI already open at %APPZILLON_URL% - headed Chrome will popup and automate
+                    npx playwright test tests/05-home-quiz-flow.spec.js --headed --project=chromium 2>&1
                     set PW_EXIT=%errorlevel%
                     echo.
                     echo Playwright exit: %PW_EXIT%
@@ -1016,8 +1016,8 @@ pipeline {
             echo '=========================================='
 
             echo 'Check the stage that failed.'
-            echo 'Backend log: backend.log'
-            echo 'Tomcat logs: D:\\tom\\apache-tomcat-9.0.53\\logs\\'
+            echo "Backend log: backend.log (workspace)"
+            echo "Tomcat logs: ${APPZ_HOME}\\logs\\"
             echo '=========================================='
         }
     }
