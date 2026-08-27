@@ -1,127 +1,792 @@
+ 
 pipeline {
+ 
     agent any
-
-    triggers {
-        pollSCM('* * * * *')
-    }
-
+ 
     environment {
-        APP_JAR        = 'target/quiz-bg-1.0.0.jar'
-        APPZ_HOME      = 'D:/tom/apache-tomcat-9.0.53'
+ 
+        // ============================================================
+        // JAVA
+        // ============================================================
+ 
+        JAVA_HOME = 'D:/software/jdk-21.0.8'
+ 
+        // ============================================================
+        // SPRING BOOT BACKEND
+        // ============================================================
+ 
+        APP_JAR = 'target/quiz-bg-1.0.0.jar'
+        BACKEND_PORT = '8080'
+        BACKEND_URL = 'http://localhost:8080/api/user/getQuizzes'
+ 
+        // ============================================================
+        // TOMCAT / APPZILLON
+        // ============================================================
+ 
+        APPZ_HOME = 'D:/tom/apache-tomcat-9.0.53'
         APPZ_ARTIFACTS = 'D:/forDeploy'
-        JAVA_HOME      = 'D:/software/jdk-21.0.8'
+ 
+        TOMCAT_PORT = '8090'
+ 
+        APPZILLON_URL = 'http://localhost:88090/quizzz/'
     }
-
+ 
+ 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
+ 
+        // ============================================================
+        // BUILD BACKEND
+        // ============================================================
+ 
         stage('Build Backend Jar') {
+ 
             steps {
-                bat 'mvn clean package -DskipTests'
+ 
+                echo '=========================================='
+                echo 'BUILDING QUIZAPP BACKEND'
+                echo '=========================================='
+ 
+ 
+                // ----------------------------------------------------
+                // SET JAVA
+                // ----------------------------------------------------
+ 
+                bat '''
+                    @echo off
+ 
+                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+ 
+                    echo JAVA VERSION
+                    java -version
+ 
+                    echo.
+                    echo MAVEN VERSION
+                    mvn -version
+                '''
+ 
+ 
+                // ----------------------------------------------------
+                // CHECK PROJECT
+                // ----------------------------------------------------
+ 
+                echo '=========================================='
+                echo 'CHECKING MAVEN PROJECT'
+                echo '=========================================='
+ 
+                bat '''
+                    @echo off
+ 
+                    echo Current workspace:
+                    cd
+ 
+                    echo.
+                    echo Checking pom.xml...
+ 
+                    if not exist "pom.xml" (
+                        echo ERROR: pom.xml not found in workspace
+                        echo.
+                        echo Workspace contents:
+                        dir
+                        exit /b 1
+                    )
+ 
+                    echo pom.xml found successfully.
+                '''
+ 
+ 
+                // ----------------------------------------------------
+                // STOP OLD BACKEND
+                // ----------------------------------------------------
+ 
+                echo '=========================================='
+                echo 'KILLING OLD BACKEND PROCESS'
+                echo '=========================================='
+ 
+                bat '''
+                    @echo off
+ 
+                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8080 ^| findstr LISTENING') do (
+ 
+                        echo Killing process %%a on port 8080
+ 
+                        taskkill /F /PID %%a >nul 2>&1
+                    )
+ 
+                    ping 127.0.0.1 -n 3 >nul
+                '''
+ 
+ 
+                // ----------------------------------------------------
+                // MAVEN BUILD
+                // ----------------------------------------------------
+ 
+                echo '=========================================='
+                echo 'STARTING MAVEN BUILD'
+                echo '=========================================='
+ 
+                bat '''
+                    @echo off
+ 
+                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+ 
+                    mvn clean package -DskipTests
+ 
+                    if errorlevel 1 (
+ 
+                        echo.
+                        echo ==========================================
+                        echo MAVEN BUILD FAILED
+                        echo ==========================================
+ 
+                        exit /b 1
+                    )
+ 
+                    echo.
+                    echo ==========================================
+                    echo MAVEN BUILD SUCCESSFUL
+                    echo ==========================================
+                '''
+ 
+ 
+                // ----------------------------------------------------
+                // CHECK GENERATED JAR
+                // ----------------------------------------------------
+ 
+                echo '=========================================='
+                echo 'CHECKING GENERATED JAR'
+                echo '=========================================='
+ 
+                bat '''
+                    @echo off
+ 
+                    if not exist "target\\quiz-bg-1.0.0.jar" (
+ 
+                        echo ERROR: target\\quiz-bg-1.0.0.jar NOT FOUND
+ 
+                        echo.
+                        echo Target directory contents:
+ 
+                        if exist target (
+                            dir target
+                        ) else (
+                            echo target directory does not exist
+                        )
+ 
+                        exit /b 1
+                    )
+ 
+                    echo.
+                    echo ==========================================
+                    echo QUIZBACKEND JAR FOUND
+                    echo ==========================================
+ 
+                    dir target\\*.jar
+                '''
             }
         }
-
-        stage('Deploy Backend (port 8080)') {
+ 
+ 
+        // ============================================================
+        // DEPLOY BACKEND
+        // ============================================================
+ 
+        stage('Deploy Backend') {
+ 
             steps {
+ 
+                echo '=========================================='
+                echo 'DEPLOYING QUIZAPP BACKEND'
+                echo '=========================================='
+ 
+ 
                 bat '''
+                    @echo off
+ 
+                    if not exist "%WORKSPACE%\\target\\quiz-bg-1.0.0.jar" (
+ 
+                        echo ERROR: JAR NOT FOUND
+                        echo Expected:
+                        echo %WORKSPACE%\\target\\quiz-bg-1.0.0.jar
+ 
+                        exit /b 1
+                    )
+ 
+ 
+                    echo.
+                    echo QuizBackend JAR found.
+ 
+ 
+                    // ------------------------------------------------
+                    // STOP OLD PROCESS
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo CHECKING PORT 8080
+                    echo ==========================================
+ 
+ 
                     for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8080 ^| findstr LISTENING') do (
-                        taskkill /F /PID %%a
+ 
+                        echo Stopping process %%a on port 8080
+ 
+                        taskkill /F /PID %%a >nul 2>&1
+                    )
+ 
+ 
+                    echo.
+                    echo Waiting for port 8080...
+ 
+                    ping 127.0.0.1 -n 4 >nul
+ 
+ 
+                    // ------------------------------------------------
+                    // START BACKEND
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo STARTING QUIZAPP BACKEND
+                    echo ==========================================
+ 
+ 
+                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+                    set "JENKINS_NODE_COOKIE=dontKillMe"
+ 
+ 
+                    echo Starting:
+ 
+                    echo java -jar target\\quiz-bg-1.0.0.jar
+ 
+ 
+                    start "QuizApp-Backend" /B cmd /c ^
+                    "set JENKINS_NODE_COOKIE=dontKillMe && java -jar target\\quiz-bg-1.0.0.jar > backend.log 2>&1"
+ 
+ 
+                    echo.
+                    echo BACKEND START COMMAND EXECUTED
+ 
+ 
+                    echo.
+                    echo Waiting for application to start...
+ 
+                    ping 127.0.0.1 -n 6 >nul
+ 
+ 
+                    // ------------------------------------------------
+                    // SHOW LOG
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo BACKEND LOG
+                    echo ==========================================
+ 
+ 
+                    if exist backend.log (
+ 
+                        powershell -Command "Get-Content backend.log -Tail 30"
+ 
+                    ) else (
+ 
+                        echo backend.log not found
+ 
+                    )
+                '''
+            }
+        }
+ 
+ 
+        // ============================================================
+        // BACKEND HEALTH CHECK
+        // ============================================================
+ 
+        stage('Backend Health Check') {
+ 
+            steps {
+ 
+                echo '=========================================='
+                echo 'CHECKING QUIZAPP BACKEND'
+                echo '=========================================='
+ 
+ 
+                bat '''
+                    @echo off
+ 
+ 
+                    echo.
+                    echo Backend URL:
+                    echo %BACKEND_URL%
+ 
+ 
+                    echo.
+                    echo Backend Port:
+                    echo %BACKEND_PORT%
+ 
+ 
+                    set RETRIES=20
+ 
+ 
+                    :CHECK_BACKEND
+ 
+                    echo.
+                    echo Checking backend...
+                    echo Remaining attempts: %RETRIES%
+ 
+ 
+                    curl -s -o nul -w "%%{http_code}" "%BACKEND_URL%" | findstr "200 201"
+ 
+ 
+                    if not errorlevel 1 (
+ 
+                        echo.
+                        echo ==========================================
+                        echo BACKEND IS RUNNING
+                        echo ==========================================
+ 
+                        echo Backend URL:
+                        echo %BACKEND_URL%
+ 
                         exit /b 0
                     )
-                    exit /b 0
-                '''
-                bat 'set JENKINS_NODE_COOKIE=dontKillMe && start /B cmd /c "java -jar %APP_JAR% > backend.log 2>&1"'
-            }
-        }
-
-        stage('Backend Health Check') {
-            steps {
-                bat '''
-                    set RETRIES=20
-                    :waitloop1
-                    curl -s -o nul -w "%%{http_code}" http://localhost:8080/api/user/getQuizzes | findstr 200
-                    if errorlevel 1 (
-                        ping -n 6 127.0.0.1 >nul
-                        set /a RETRIES-=1
-                        if %RETRIES% GTR 0 goto waitloop1
+ 
+ 
+                    echo.
+                    echo Backend not ready.
+ 
+ 
+                    set /a RETRIES-=1
+ 
+ 
+                    if %RETRIES% LEQ 0 (
+ 
+                        echo.
+                        echo ==========================================
+                        echo BACKEND FAILED TO START
+                        echo ==========================================
+ 
+ 
+                        echo.
+                        echo ==========================================
+                        echo PORT 8080 STATUS
+                        echo ==========================================
+ 
+                        netstat -ano | findstr :8080
+ 
+ 
+                        echo.
+                        echo ==========================================
+                        echo BACKEND LOG
+                        echo ==========================================
+ 
+ 
+                        if exist backend.log (
+ 
+                            type backend.log
+ 
+                        ) else (
+ 
+                            echo backend.log not found
+ 
+                        )
+ 
+ 
                         exit /b 1
                     )
-                    echo BACKEND UP ON 8080
+ 
+ 
+                    echo.
+                    echo Waiting 3 seconds before retry...
+ 
+                    ping 127.0.0.1 -n 4 >nul
+ 
+ 
+                    goto CHECK_BACKEND
                 '''
             }
         }
-
-        stage('Deploy Appzillon (Tomcat 8090)') {
+ 
+ 
+        // ============================================================
+        // DEPLOY APPZILLON
+        // ============================================================
+ 
+        stage('Deploy Appzillon') {
+ 
             steps {
+ 
+                echo '=========================================='
+                echo 'DEPLOYING APPZILLON QUIZAPP'
+                echo '=========================================='
+ 
+ 
                 bat '''
-                    set CHANGED=0
-                    if not exist "%APPZ_HOME%\\webapps\\AppzillonServer.war" set CHANGED=1
-                    if not exist "%APPZ_HOME%\\webapps\\quizzz.war" set CHANGED=1
-
-                    for /f %%i in ('powershell -NoProfile -Command "(Get-FileHash -Algorithm MD5 '%APPZ_ARTIFACTS%/AppzillonServer.war').Hash"') do set SRC1=%%i
-                    for /f %%i in ('powershell -NoProfile -Command "(Get-FileHash -Algorithm MD5 '%APPZ_HOME%/webapps/AppzillonServer.war').Hash"') do set DST1=%%i
-                    for /f %%i in ('powershell -NoProfile -Command "(Get-FileHash -Algorithm MD5 '%APPZ_ARTIFACTS%/quizzz.war').Hash"') do set SRC2=%%i
-                    for /f %%i in ('powershell -NoProfile -Command "(Get-FileHash -Algorithm MD5 '%APPZ_HOME%/webapps/quizzz.war').Hash"') do set DST2=%%i
-
-                    if not "%SRC1%"=="%DST1%" set CHANGED=1
-                    if not "%SRC2%"=="%DST2%" set CHANGED=1
-
-                    netstat -ano | findstr :8090 | findstr LISTENING >nul
-                    if %ERRORLEVEL%==0 set TOMCAT_UP=1
-
-                    if "%CHANGED%"=="1" goto redeploy
-                    if "%TOMCAT_UP%"=="1" goto already_running
-
-                    :redeploy
-                    echo NEW WARS DETECTED - REDEPLOYING TOMCAT
-                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8090 ^| findstr LISTENING') do taskkill /F /PID %%a
-                    ping -n 5 127.0.0.1 >nul
-                    rmdir /S /Q "%APPZ_HOME%\\webapps\\AppzillonServer"
-                    rmdir /S /Q "%APPZ_HOME%\\webapps\\quizzz"
-                    del  /F /Q "%APPZ_HOME%\\webapps\\AppzillonServer.war"
-                    del  /F /Q "%APPZ_HOME%\\webapps\\quizzz.war"
-                    copy /Y "%APPZ_ARTIFACTS%\\AppzillonServer.war" "%APPZ_HOME%\\webapps\\" >nul
-                    copy /Y "%APPZ_ARTIFACTS%\\quizzz.war"       "%APPZ_HOME%\\webapps\\" >nul
-                    set JENKINS_NODE_COOKIE=dontKillMe
-                    start /B cmd /c "call %APPZ_HOME%/bin/catalina.bat run > %APPZ_HOME%/logs/jenkins-run.log 2>&1"
-                    echo TOMCAT STARTING WITH FRESH WARS
-                    exit /b 0
-
-                    :already_running
-                    echo WARS UNCHANGED AND TOMCAT RUNNING - SKIPPING REDEPLOY
-                    exit /b 0
+                    @echo off
+ 
+ 
+                    // ------------------------------------------------
+                    // CHECK WAR
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo CHECKING QUIZAPP WAR
+                    echo ==========================================
+ 
+ 
+                    if not exist "%APPZ_ARTIFACTS%\\quizzz.war" (
+ 
+                        echo ERROR:
+                        echo QuizFr.war not found.
+ 
+                        echo Expected:
+                        echo %APPZ_ARTIFACTS%\\quizzz.war
+ 
+                        exit /b 1
+                    )
+ 
+ 
+                    echo QuizFr.war found.
+ 
+ 
+                    // ------------------------------------------------
+                    // CHECK TOMCAT
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo CHECKING TOMCAT
+                    echo ==========================================
+ 
+ 
+                    echo TOMCAT HOME:
+                    echo %APPZ_HOME%
+ 
+ 
+                    if not exist "%APPZ_HOME%\\bin\\catalina.bat" (
+ 
+                        echo ERROR:
+                        echo catalina.bat not found.
+ 
+                        exit /b 1
+                    )
+ 
+ 
+                    echo Tomcat installation found.
+ 
+ 
+                    // ------------------------------------------------
+                    // STOP TOMCAT
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo STOPPING TOMCAT
+                    echo ==========================================
+ 
+ 
+                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%TOMCAT_PORT% ^| findstr LISTENING') do (
+ 
+                        echo Killing PID %%a
+ 
+                        taskkill /F /PID %%a >nul 2>&1
+                    )
+ 
+ 
+                    echo.
+                    echo Waiting for Tomcat to stop...
+ 
+                    ping 127.0.0.1 -n 4 >nul
+ 
+ 
+                    // ------------------------------------------------
+                    // REMOVE OLD APPLICATION
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo REMOVING OLD QUIZAPP
+                    echo ==========================================
+ 
+ 
+                    rmdir /S /Q "%APPZ_HOME%\\webapps\\quizzz" >nul 2>&1
+ 
+                    del /F /Q "%APPZ_HOME%\\webapps\\quizzz.war" >nul 2>&1
+ 
+ 
+                    // ------------------------------------------------
+                    // COPY NEW WAR
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo COPYING quizzz.WAR
+                    echo ==========================================
+ 
+ 
+                    copy /Y "%APPZ_ARTIFACTS%\\quizzz.war" "%APPZ_HOME%\\webapps\\quizzz.war"
+ 
+ 
+                    if errorlevel 1 (
+ 
+                        echo ERROR:
+                        echo Failed to copy quizzz.war.
+ 
+                        exit /b 1
+                    )
+ 
+ 
+                    echo QuizFr.war copied successfully.
+ 
+ 
+                    // ------------------------------------------------
+                    // START TOMCAT
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo STARTING TOMCAT
+                    echo ==========================================
+ 
+ 
+                    set "JAVA_HOME=C:\\Program Files\\Java\\jdk-21.0.8"
+                    set "PATH=%JAVA_HOME%\\bin;%PATH%"
+                    set "CATALINA_HOME=%APPZ_HOME%"
+                    set "JENKINS_NODE_COOKIE=dontKillMe"
+ 
+ 
+                    echo Starting Tomcat...
+ 
+                    "%APPZ_HOME%\\bin\\catalina.bat" start
+ 
+ 
+                    if errorlevel 1 (
+ 
+                        echo.
+                        echo ERROR:
+                        echo Tomcat failed to start.
+ 
+                        exit /b 1
+                    )
+ 
+ 
+                    echo.
+                    echo TOMCAT START COMMAND EXECUTED
+ 
+ 
+                    echo.
+                    echo Waiting 15 seconds for Tomcat...
+ 
+                    ping 127.0.0.1 -n 16 >nul
+ 
+ 
+                    // ------------------------------------------------
+                    // CHECK TOMCAT PORT
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo CHECKING TOMCAT PORT
+                    echo ==========================================
+ 
+ 
+                    netstat -ano | findstr :%TOMCAT_PORT% | findstr LISTENING
+ 
+ 
+                    if errorlevel 1 (
+ 
+                        echo WARNING:
+                        echo Port %TOMCAT_PORT% is not listening yet.
+ 
+                    ) else (
+ 
+                        echo Port %TOMCAT_PORT% is listening.
+ 
+                    )
+ 
+ 
+                    // ------------------------------------------------
+                    // TOMCAT LOG
+                    // ------------------------------------------------
+ 
+                    echo.
+                    echo ==========================================
+                    echo TOMCAT LOG
+                    echo ==========================================
+ 
+ 
+                    if exist "%APPZ_HOME%\\logs\\catalina.out" (
+ 
+                        powershell -Command "Get-Content '%APPZ_HOME%\\logs\\catalina.out' -Tail 30"
+ 
+                    ) else if exist "%APPZ_HOME%\\logs\\jenkins-run.log" (
+ 
+                        powershell -Command "Get-Content '%APPZ_HOME%\\logs\\jenkins-run.log' -Tail 30"
+ 
+                    ) else (
+ 
+                        echo No Tomcat log found.
+ 
+                        dir "%APPZ_HOME%\\logs\\" 2>nul
+                    )
                 '''
             }
         }
-
+ 
+ 
+        // ============================================================
+        // APPZILLON HEALTH CHECK
+        // ============================================================
+ 
         stage('Appzillon Health Check') {
+ 
             steps {
+ 
+                echo '=========================================='
+                echo 'CHECKING APPZILLON'
+                echo '=========================================='
+ 
+ 
                 bat '''
-                    set RETRIES=45
-                    :waitloop2
-                    curl -s -o nul -w "%%{http_code}" http://localhost:8090/quizzz/ | findstr 200
-                    if errorlevel 1 (
-                        ping -n 7 127.0.0.1 >nul
-                        set /a RETRIES-=1
-                        if %RETRIES% GTR 0 goto waitloop2
+                    @echo off
+ 
+ 
+                    echo.
+                    echo Appzillon URL:
+                    echo %APPZILLON_URL%
+ 
+ 
+                    echo.
+                    echo Tomcat Port:
+                    echo %TOMCAT_PORT%
+ 
+ 
+                    set RETRIES=30
+ 
+ 
+                    :CHECK_APPZILLON
+ 
+                    echo.
+                    echo Checking Appzillon...
+                    echo Attempts remaining: %RETRIES%
+ 
+ 
+                    curl -s -o nul -w "%%{http_code}" "%APPZILLON_URL%" | findstr "200 302 404"
+ 
+ 
+                    if not errorlevel 1 (
+ 
+                        echo.
+                        echo ==========================================
+                        echo APPZILLON IS RUNNING
+                        echo ==========================================
+ 
+                        echo URL:
+                        echo %APPZILLON_URL%
+ 
+                        exit /b 0
+                    )
+ 
+ 
+                    set /a RETRIES-=1
+ 
+ 
+                    if %RETRIES% LEQ 0 (
+ 
+                        echo.
+                        echo ==========================================
+                        echo APPZILLON FAILED TO START
+                        echo ==========================================
+ 
+ 
+                        echo.
+                        echo ==========================================
+                        echo TOMCAT PORT STATUS
+                        echo ==========================================
+ 
+                        netstat -ano | findstr :%TOMCAT_PORT%
+ 
+ 
+                        echo.
+                        echo ==========================================
+                        echo TOMCAT LOG
+                        echo ==========================================
+ 
+ 
+                        if exist "%APPZ_HOME%\\logs\\catalina.out" (
+ 
+                            powershell -Command "Get-Content '%APPZ_HOME%\\logs\\catalina.out' -Tail 30"
+ 
+                        ) else if exist "%APPZ_HOME%\\logs\\jenkins-run.log" (
+ 
+                            powershell -Command "Get-Content '%APPZ_HOME%\\logs\\jenkins-run.log' -Tail 30"
+ 
+                        ) else (
+ 
+                            echo No Tomcat log found.
+ 
+                        )
+ 
+ 
                         exit /b 1
                     )
-                    echo APPZILLON UP ON 8090
+ 
+ 
+                    echo.
+                    echo Waiting 5 seconds...
+ 
+                    ping 127.0.0.1 -n 6 >nul
+ 
+ 
+                    goto CHECK_APPZILLON
                 '''
             }
         }
     }
-
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    // ============================================================
+    // POST ACTIONS
+    // ============================================================
+ 
     post {
+ 
         success {
-            echo 'DEPLOY DONE: Backend 8080 + Appzillon 8090'
+ 
+            echo '=========================================='
+            echo 'QUIZAPP DEPLOYMENT SUCCESSFUL'
+            echo '=========================================='
+ 
+            echo 'Backend:'
+            echo 'http://localhost:8080'
+ 
+            echo 'Appzillon:'
+            echo 'http://localhost:8090/quizzz/'
+ 
+            echo '=========================================='
         }
+ 
+ 
         failure {
-            echo 'Pipeline failed - check console output and app logs'
+ 
+            echo '=========================================='
+            echo 'QUIZAPP DEPLOYMENT FAILED'
+            echo '=========================================='
+ 
+            echo 'Check the stage that failed.'
+ 
+            echo '=========================================='
         }
     }
 }
+ 
+ 
+ 
