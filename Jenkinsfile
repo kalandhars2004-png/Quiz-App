@@ -35,7 +35,7 @@ pipeline {
         TOMCAT_PORT = '8090'
         APPZILLON_URL = 'http://localhost:8090/quizzz/'
         // DB
-        DB_NAME = 'testingbg'
+        DB_NAME = 'r'
         DB_USER = 'root'
         DB_PASS = 'root'
         MYSQL_BIN = 'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin'
