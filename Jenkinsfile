@@ -264,7 +264,7 @@ pipeline {
 
 
                     start "QuizApp-Backend" /B cmd /c ^
-                    "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=D:\software\jdk-21.0.8 && java -jar target\\quiz-bg-1.0.0.jar > backend.log 2>&1"
+                    "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=D:/software/jdk-21.0.8 && java -jar target\\quiz-bg-1.0.0.jar > backend.log 2>&1"
 
 
                     echo.
