@@ -200,7 +200,7 @@ pipeline {
                     echo Starting:
                     echo java -jar %APP_JAR%
 
-                    start "QuizApp-Backend" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=%JAVA_HOME:\=/% && java -jar %APP_JAR% > backend.log 2>&1"
+                    start "QuizApp-Backend" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe && set JAVA_HOME=%JAVA_HOME% && java -jar %APP_JAR% > backend.log 2>&1"
 
                     echo.
                     echo BACKEND START COMMAND EXECUTED
