@@ -38,7 +38,8 @@ pipeline {
         MYSQL_BIN = 'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin'
 
         // PLAYWRIGHT - runs AFTER UI popup (UI must be on APPZILLON_URL)
-        PLAYWRIGHT_DIR = 'D:\\playwright-quizzz'
+        PLAYWRIGHT_DIR = 'D:\\playwright-quizzz' // Node (legacy, kept for reference)
+        PLAYWRIGHT_JAVA_DIR = 'D:\\playwright-quizzz-java' // Java level Playwright (working)
         // NOTE: All stages below read from above vars via %VAR% (bat) or $env:VAR (powershell) - no hardcoding inside stages
     }
 
@@ -927,59 +928,55 @@ pipeline {
         }
 
         // ============================================================
-        // PLAYWRIGHT - TRIGGERED AFTER UI OPENED (HEADED CHROME POPUP)
+        // PLAYWRIGHT JAVA - TRIGGERED AFTER UI OPENED (HEADED CHROME POPUP)
+        // Java level Playwright (working) - replaces Node
         // ============================================================
-        stage('Playwright UI Tests - After Open') {
+        stage('Playwright Java - After UI (Headed Chrome)') {
             steps {
                 echo '=========================================='
-                echo 'PLAYWRIGHT TRIGGERED AFTER UI OPENED - HEADED CHROME'
+                echo 'PLAYWRIGHT JAVA TRIGGERED AFTER UI OPENED - HEADED CHROME'
                 echo '=========================================='
                 bat '''
                     @echo off
-                    echo Playwright dir: %PLAYWRIGHT_DIR%
+                    echo Playwright Java dir: %PLAYWRIGHT_JAVA_DIR%
+                    echo Playwright Node dir (legacy): %PLAYWRIGHT_DIR%
                     echo Appzillon URL: %APPZILLON_URL%
                     echo.
-                    if not exist "%PLAYWRIGHT_DIR%" (
-                        echo ERROR: Playwright dir not found at %PLAYWRIGHT_DIR%
-                        echo Creating dir...
-                        mkdir "%PLAYWRIGHT_DIR%" 2>nul
+                    if not exist "%PLAYWRIGHT_JAVA_DIR%" (
+                        echo ERROR: Java Playwright dir not found at %PLAYWRIGHT_JAVA_DIR%
+                        dir "D:\\" | findstr playwright
                         exit /b 1
                     )
-                    if not exist "%PLAYWRIGHT_DIR%\\package.json" (
-                        echo ERROR: package.json missing in %PLAYWRIGHT_DIR%
-                        dir "%PLAYWRIGHT_DIR%"
+                    if not exist "%PLAYWRIGHT_JAVA_DIR%\\pom.xml" (
+                        echo ERROR: pom.xml missing in %PLAYWRIGHT_JAVA_DIR%
+                        dir "%PLAYWRIGHT_JAVA_DIR%"
                         exit /b 1
                     )
                     echo.
-                    echo Checking playwright tests (only Home-Quiz flow as requested)...
-                    dir "%PLAYWRIGHT_DIR%\\tests" 2>nul
+                    echo Checking Java tests (HomeQuizFlowTest - Home 1 -> Quiz 10 touch->Mark->Finish)...
+                    dir "%PLAYWRIGHT_JAVA_DIR%\\src\\test\\java\\com\\quiz" 2>nul
                     echo.
-                    cd /d "%PLAYWRIGHT_DIR%"
-                    echo Using system Chrome (channel:chrome) to avoid download cert issue...
-                    echo Check playwright config uses channel:chrome
-                    type playwright.config.js | findstr channel
+                    cd /d "%PLAYWRIGHT_JAVA_DIR%"
+                    echo Using system Chrome channel:chrome (pom playwright 1.44.0) to avoid download...
+                    echo JAVA_HOME: %JAVA_HOME%
+                    java -version
                     echo.
                     echo ==========================================
-                    echo RUNNING PLAYWRIGHT HEADED - HOME-QUIZ FLOW ONLY
+                    echo RUNNING JAVA PLAYWRIGHT HEADED - HOME-QUIZ FLOW
                     echo ==========================================
-                    echo Command: npx playwright test tests/05-home-quiz-flow.spec.js --headed --project=chromium
-                    echo Steps: Home quizzz__Home__el_inp_1=1, btn_1 submit, then Quiz 10 Qs random mark btn_2, finish btn_3
-                    echo UI already open at %APPZILLON_URL% - headed Chrome will popup and automate
-                    npx playwright test tests/05-home-quiz-flow.spec.js --headed --project=chromium 2>&1
+                    echo Command: mvn test -Dtest=HomeQuizFlowTest
+                    echo Steps: Home quizzz__Home__el_inp_1=1, btn_1 GoTo, then Quiz 10 Qs touch row -> fill inp_2/1 random -> btn_2 Mark -> btn_3 Finish
+                    echo UI already open at %APPZILLON_URL% - headed Chrome will popup via Playwright Java
+                    mvn test -Dtest=HomeQuizFlowTest 2>&1
                     set PW_EXIT=%errorlevel%
                     echo.
-                    echo Playwright exit: %PW_EXIT%
+                    echo Java Playwright exit: %PW_EXIT%
                     if %PW_EXIT% NEQ 0 (
-                        echo WARNING: Some Playwright tests failed - check html report
-                        if exist "playwright-report\\index.html" (
-                            echo Opening report...
-                            start "" "playwright-report\\index.html"
-                        )
-                        REM Do not fail pipeline hard - mark unstable but continue
-                        echo Playwright completed with failures, pipeline continues
+                        echo WARNING: Java Playwright failed - check target/surefire-reports
+                        if exist "target\\surefire-reports\\com.quiz.HomeQuizFlowTest.txt" type "target\\surefire-reports\\com.quiz.HomeQuizFlowTest.txt"
+                        echo Pipeline continues (not failing hard)
                     ) else (
-                        echo ALL PLAYWRIGHT TESTS PASSED - UI VERIFIED
-                        if exist "playwright-report\\index.html" start "" "playwright-report\\index.html"
+                        echo ALL JAVA PLAYWRIGHT TESTS PASSED - UI VERIFIED
                     )
                     exit /b 0
                 '''
